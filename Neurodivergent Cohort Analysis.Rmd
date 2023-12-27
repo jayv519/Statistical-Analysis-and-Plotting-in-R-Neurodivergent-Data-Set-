@@ -1,0 +1,448 @@
+---
+title: "Part 3: Cohort Analysis"
+author: "Jorge Valderrama"
+date: "July 2023"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(skimr)
+library(janitor)
+library(here)
+library(ggthemes)
+library(broom)
+library(rstatix)
+library(correlation)
+library(lm.beta)
+library(psych)
+```
+
+## Importing Data
+```{r}
+
+setwd("~/Downloads")
+
+CH_3R <- read_excel ("CH_3_R.xlsx")
+```
+
+## Adding Names to Variable Data
+
+```{r}
+CH_DF <- CH_3R %>% 
+mutate(Gender_1_R= if_else(Gender_1_R== 1, "Female",
+                                     if_else(Gender_1_R== 2, "Male",
+                                     if_else(Gender_1_R==3, "Non-binary",
+                                     if_else(Gender_1_R==4, "Genderqueer/nonconforming",
+                                     if_else(Gender_1_R==5, "Gender fluid",
+                                     if_else (Gender_1_R==6, "Gender questioning",
+                                     if_else(Gender_1_R==7, "Gender neutral",
+                                     if_else(Gender_1_R==8, "Other", NA_character_)))))))))
+
+CH_DF <- CH_DF %>% 
+mutate(Gender_2_R= if_else(Gender_2_R== 1, "Female",
+                                     if_else(Gender_2_R== 2, "Male",
+                                     if_else(Gender_2_R==3, "Non-binary",
+                                     if_else(Gender_2_R==4, "Genderqueer/nonconforming",
+                                     if_else(Gender_2_R==5, "Gender fluid",
+                                     if_else (Gender_2_R==6, "Gender questioning",
+                                     if_else(Gender_2_R==7, "Gender neutral",
+                                     if_else(Gender_2_R==8, "Other", NA_character_)))))))))
+CH_DF <- CH_DF %>% 
+mutate(Gender_3_R= if_else(Gender_3_R== 1, "Female",
+                                     if_else(Gender_3_R== 2, "Male",
+                                     if_else(Gender_3_R==3, "Non-binary",
+                                     if_else(Gender_3_R==4, "Genderqueer/nonconforming",
+                                     if_else(Gender_3_R==5, "Gender fluid",
+                                     if_else (Gender_3_R==6, "Gender questioning",
+                                     if_else(Gender_3_R==7, "Gender neutral",
+                                     if_else(Gender_3_R==8, "Other", NA_character_)))))))))
+```
+
+## T-Tests Analyses
+
+```{r}
+CH_DF1 <- CH_DF %>% 
+select(Wellbeing_Status, `Dissociative Score`, InternalStigmaAvgScore, Autism, ADHD, Autism_ADHD, Age_R, PHQ_Score_R, GAD_Score_R, WHO_Score_R, Pre_Score_R, Gender_1_R)
+
+CH_DF1
+```
+
+```{r}
+CH_DF1 %>% 
+  t_test(PHQ_Score_R ~ Autism, var.equal = TRUE)
+```
+
+```{r}
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+```
+
+
+```{r}
+dfAut <- data_summary(CH_DF1, varname="PHQ_Score_R", 
+                    groupnames=c("Autism"))
+head(dfAut)
+```
+
+```{r}
+ggplot(data = dfAut, 
+       mapping = aes(x = Autism, 
+                     y = PHQ_Score_R)) +
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=PHQ_Score_R-sd, ymax=PHQ_Score_R+sd), width=.2,
+                 position=position_dodge(.9))+
+   scale_y_continuous(limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25, 30)) +
+  labs(x = "Autism Diagnosis",
+       y = "PHQ-9 Score",
+       title = "Neurodivergent Cohort - Differences in PHQ-9: Autism")+
+    theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 15, vjust = 3, hjust = .5))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+CH_DF1 %>% 
+  t_test(GAD_Score_R ~ Autism, var.equal = TRUE)
+```
+
+```{r}
+dfAutGAD <- data_summary(CH_DF1, varname="GAD_Score_R", 
+                    groupnames=c("Autism"))
+head(dfAutGAD)
+```
+
+```{r}
+ggplot(data = dfAutGAD, 
+       mapping = aes(x = Autism, 
+                     y = GAD_Score_R)) +
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=GAD_Score_R-sd, ymax=GAD_Score_R+sd), width=.2,
+                 position=position_dodge(.9))+
+   scale_y_continuous(limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25, 30)) +
+  labs(x = "Autism Diagnosis",
+       y = "GAD Score",
+       title = "Neurodivergent Cohort - Differences in GAD-7: Autism")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 13, vjust = 3, hjust = .5))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+CH_DF1 %>% 
+  t_test(WHO_Score_R ~ ADHD, var.equal = TRUE)
+```
+
+```{r}
+dfADHDWHO <- data_summary(CH_DF1, varname="WHO_Score_R", 
+                    groupnames=c("ADHD"))
+head(dfADHDWHO)
+```
+
+```{r}
+ggplot(data = dfADHDWHO, 
+       mapping = aes(x = ADHD, 
+                     y = WHO_Score_R)) +
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=WHO_Score_R-sd, ymax=WHO_Score_R+sd), width=.2,
+                 position=position_dodge(.9))+
+   scale_y_continuous(limits = c(-5, 25),
+                     breaks = c(-5, 0, 5, 10, 15, 20, 25)) +
+  labs(x = "ADHD Diagnosis",
+       y = "WHO Score",
+       title = "Neurodivergent Cohort - Differences in WHO-5: ADHD")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 13, vjust = 4, hjust = .5))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+CH_DF1 %>% 
+  t_test(Pre_Score_R ~ ADHD, var.equal = TRUE)
+```
+
+
+```{r}
+dfADHDPRE <- data_summary(CH_DF1, varname="Pre_Score_R", 
+                    groupnames=c("ADHD"))
+head(dfADHDPRE)
+```
+
+```{r}
+ggplot(data = dfADHDPRE, 
+       mapping = aes(x = ADHD, 
+                     y = Pre_Score_R)) +
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=Pre_Score_R-sd, ymax=Pre_Score_R+sd), width=.2,
+                 position=position_dodge(.9))+
+   scale_y_continuous(limits = c(0, 35),
+                     breaks = c(0, 5, 10, 15, 20, 25, 30,35)) +
+  labs(x = "ADHD Diagnosis",
+       y = "PRE Score",
+       title = "Neuorodivergent Cohort - Differences in Quality of Family Relationships: ADHD")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 12, vjust = 4, hjust = .5))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+## One-Way ANOVA Analyses
+
+```{r}
+CH_DF1 %>% 
+  anova_test(Pre_Score_R ~ Autism_ADHD, detailed = TRUE) 
+```
+
+```{r}
+CH_DF1 %>% 
+  tukey_hsd(Pre_Score_R ~ Autism_ADHD, detailed = TRUE)
+```
+
+```{r}
+dfAutADHDPRE <- data_summary(CH_DF1, varname="Pre_Score_R", 
+                    groupnames=c("Autism_ADHD"))
+head(dfAutADHDPRE)
+```
+
+```{r}
+ggplot(data = dfAutADHDPRE, 
+       mapping = aes(x = Autism_ADHD, 
+                     y = Pre_Score_R)) +
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=Pre_Score_R-sd, ymax=Pre_Score_R+sd), width=.2,
+                 position=position_dodge(.9))+
+   scale_y_continuous(limits = c(-10, 35),
+                     breaks = c(-10, -5,0, 5, 10, 15, 20, 25, 30,35)) +
+  labs(x = "Diagnosis",
+       y = "PRE Score",
+       title = "Neurodivergent Cohort - Differences in Quality of Family Relationships")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 13, vjust = 4))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+WB_WHO <- CH_DF1 %>% 
+  select(Wellbeing_Status, WHO_Score_R) %>% 
+  drop_na()
+
+WB_WHO
+```
+
+```{r}
+WB_WHO %>% 
+  anova_test(WHO_Score_R ~ Wellbeing_Status, detailed = TRUE)
+```
+
+```{r}
+WB_WHO %>% 
+  tukey_hsd(WHO_Score_R ~ Wellbeing_Status, detailed = TRUE)
+```
+
+```{r}
+dfWELLWHO <- data_summary(WB_WHO, varname="WHO_Score_R", 
+                    groupnames=c("Wellbeing_Status"))
+head(dfWELLWHO)
+```
+
+```{r}
+ggplot(data = dfWELLWHO, 
+       mapping = aes(x = Wellbeing_Status, 
+                     y = WHO_Score_R)) +
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge())+
+  geom_errorbar(aes(ymin=WHO_Score_R-sd, ymax=WHO_Score_R+sd), width=.2,
+                 position=position_dodge(.9))+
+   scale_y_continuous(limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25, 30)) +
+  labs(x = "Wellbeing Status",
+       y = "WHO Score",
+       title = "Neurodivergent Cohort - Differences in Wellbeing and WHO Score")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 13, vjust = 4))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+
+
+```{r}
+CH_DF1 %>% 
+  anova_test(PHQ_Score_R ~ Gender_1_R, detailed = TRUE) 
+```
+## Correlation Analyses
+
+```{r}
+cor_dep_gad1 <- cor.test(CH_DF1$PHQ_Score_R,CH_DF1$GAD_Score_R,
+                        method = "spearman")
+cor_dep_gad1
+```
+
+```{r}
+ggplot(data = CH_DF1,
+       mapping = aes (x = PHQ_Score_R,
+                      y = GAD_Score_R)) +
+  geom_point(show.legend = FALSE)+ 
+  scale_y_continuous(limits = c(0, 25),
+                     breaks = c(0, 5, 10, 15, 20, 25)) +
+  labs(title = "Relationship Between PHQ-9 and GAD-7 among Neurodivergent Cohort", y = "GAD-7", x = "PHQ-9")+
+  theme_economist()+
+   theme(plot.title = element_text(face = "bold", size = 13, vjust = 4))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+cor_dep_WHO1 <- cor.test(CH_DF1$PHQ_Score_R,CH_DF1$WHO_Score_R,
+                        method = "spearman")
+cor_dep_WHO1
+```
+
+```{r}
+ggplot(data = CH_DF1,
+       mapping = aes (x = PHQ_Score_R,
+                      y = WHO_Score_R)) +
+  geom_point(show.legend = FALSE)+ 
+  scale_y_continuous(limits = c(0, 25),
+                     breaks = c(0, 5, 10, 15, 20, 25)) +
+  labs(title = "Relationship Between PHQ-9 and WHO-5 among Neurodivergent Cohort", y = "WHO-5", x = "PHQ-9")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 13, vjust = 4))+
+    theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+cor_ISS_DIS1 <- cor.test(CH_DF1$InternalStigmaAvgScore,CH_DF1$`Dissociative Score`,
+                        method = "spearman")
+cor_ISS_DIS1
+```
+
+```{r}
+ggplot(data = CH_DF1,
+       mapping = aes (x = InternalStigmaAvgScore,
+                      y = `Dissociative Score`)) +
+  geom_point(show.legend = FALSE)+ 
+  scale_y_continuous(limits = c(0, 5),
+                     breaks = c(0, 1,2,3,4,5)) +
+  labs(title = "Relationship Between Internal Stigma and Dissociative Symptoms", y = "Internal Stigma Scale", x = "Dissociative Symptoms Scale")+
+  theme_economist()+
+  theme(plot.title = element_text(face = "bold", size = 14))+
+  theme(axis.title.y = element_text(vjust = 3))+
+    theme(axis.title.x = element_text(vjust = -3))
+```
+
+```{r}
+ADHD1 <- CH_DF1 %>% 
+  filter(Autism_ADHD == "ADHD")
+
+ADHD1
+```
+
+```{r}
+cor_ISS_DIS_ADHD <- cor.test(ADHD1$InternalStigmaAvgScore,ADHD1$`Dissociative Score`,
+                        method = "spearman")
+cor_ISS_DIS_ADHD
+```
+
+```{r}
+Autism1 <- CH_DF1 %>% 
+  filter(Autism_ADHD == "Autism")
+
+Autism1
+```
+
+```{r}
+cor_ISS_DIS_Autism <- cor.test(Autism1$InternalStigmaAvgScore,Autism1$`Dissociative Score`,
+                        method = "spearman")
+cor_ISS_DIS_Autism
+```
+
+```{r}
+Both1 <- CH_DF1 %>% 
+  filter(Autism_ADHD == "Both")
+
+Both1
+```
+
+```{r}
+cor_ISS_DIS_BOTH <- cor.test(Both1$InternalStigmaAvgScore,Both1$`Dissociative Score`,
+                        method = "spearman")
+cor_ISS_DIS_BOTH
+```
+
+```{r}
+ggplot(data = CH_DF1,
+       mapping = aes (x = InternalStigmaAvgScore,
+                      y = `Dissociative Score`, color = Autism_ADHD)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~Autism_ADHD)+
+    labs(title = "Relationship Between Internal Stigma and Dissociative Symptoms Across ADHD & Autism Diagnoses", y = "Internal Stigma", x = "Dissociative Symptoms")+
+  theme(plot.title = element_text(face = "bold", size = 9))
+```
+## Linear Regression
+
+```{r}
+library(lm.beta)
+```
+
+```{r}
+
+PHQ_CH_VARS.lm <- lm(PHQ_Score_R ~ WHO_Score_R + GAD_Score_R + Pre_Score_R + `Dissociative Score`+ InternalStigmaAvgScore, data = CH_DF1)
+
+summary(PHQ_CH_VARS.lm)
+
+```
+
+```{r}
+library(formatR)
+```
+
+```{r}
+library(kableExtra)
+```
+
+```{r}
+model <- lm(PHQ_Score_R ~ WHO_Score_R + GAD_Score_R + Pre_Score_R + 
+                `Dissociative Score` + InternalStigmaAvgScore, data = CH_DF1)
+
+# Tidy the model output and group by dependent variable
+tidy_model <- model %>%
+  tidy() %>%
+  group_by(term)
+
+# Create a kable table
+kable(tidy_model,
+       caption = "Table 1. Coefficient-Level Estimates for a Model Fitted to Estimate Variation in PHQ-9 Scores",
+       col.names = c("Predictor", "Estimate", "SE", "t", "p"),
+       align = c("l", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
