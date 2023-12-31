@@ -1,5 +1,5 @@
 # Statistical-Analysis-and-Plotting-in-R-Neurodivergent-Data-Set-
-Analyzing and visualizing a dataset (neurodivergent sample) in R
+Visualizing and analyzing a dataset (neurodivergent sample) in R
 
 This R Markdown file includes code for:
 •	using Tidyverse in R to select variables, mutate variables, create new data frames, filter data frames as well as plot data in bar graphs and scatter plots
